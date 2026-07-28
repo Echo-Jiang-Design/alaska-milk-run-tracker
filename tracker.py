@@ -1,5 +1,6 @@
 import urllib.request
 import json
+import sys
 from datetime import datetime, timedelta
 
 # Key waypoints for Option 1
@@ -13,7 +14,7 @@ LOCATIONS = {
     "ANC": {"name": "Anchorage", "lat": 61.1744, "lon": -149.9964},
 }
 
-# Weather code thresholds (WMO codes <= 3 are Clear / Mainly Clear / Partly Cloudy)
+# Weather thresholds (WMO codes 0-3 = Clear to Partly Cloudy)
 CLEAR_WMO_CODES = {0, 1, 2, 3}
 MAX_CLOUD_COVER = 60  # Percentage
 MAX_POP = 20          # Probability of Precipitation (%)
@@ -57,13 +58,13 @@ def evaluate_time_window(data, target_date, start_hour, end_hour):
     return is_good, summary
 
 def check_forecast_windows():
-    print(" Fetching Alaska weather forecasts...\n")
+    print("Fetching Alaska weather forecasts...\n")
     weather_cache = {code: fetch_weather(loc["lat"], loc["lon"]) for code, loc in LOCATIONS.items()}
     
     today = datetime.now().date()
     good_windows_found = False
 
-    # Check consecutive 2-day windows over the next 7 days
+    # Check consecutive 2-day windows over the next 5 days
     for day_offset in range(1, 6):
         day1 = today + timedelta(days=day_offset)
         day2 = day1 + timedelta(days=1)
@@ -73,7 +74,7 @@ def check_forecast_windows():
         # Day 1 Assessment (AS 65: SEA -> JNU between 07:00 and 13:00 AKDT)
         day1_stops = ["KTN", "WRG", "PSG", "JNU"]
         day1_passed = True
-        print(f"  Day 1 (AS 65 - Inside Passage):")
+        print("  Day 1 (AS 65 - Inside Passage):")
         for stop in day1_stops:
             ok, msg = evaluate_time_window(weather_cache[stop], day1, 7, 13)
             status = "CLEAR" if ok else "CLOUDY/RAIN"
@@ -84,7 +85,7 @@ def check_forecast_windows():
         # Day 2 Assessment (AS 61: JNU -> ANC between 09:00 and 14:00 AKDT)
         day2_stops = ["JNU", "YAK", "CDV", "ANC"]
         day2_passed = True
-        print(f"  Day 2 (AS 61 - Glacier Route):")
+        print("  Day 2 (AS 61 - Glacier Route):")
         for stop in day2_stops:
             ok, msg = evaluate_time_window(weather_cache[stop], day2, 9, 14)
             status = "CLEAR" if ok else "CLOUDY/RAIN"
@@ -98,8 +99,12 @@ def check_forecast_windows():
         else:
             print(f"  Result: Window on {day1}-{day2} does not meet optimal criteria.\n")
 
-    if not good_windows_found:
+    if good_windows_found:
+        print("CLEAR WINDOW DETECTED: Triggering notification alert via exit code 1.")
+        sys.exit(1)  # Triggers GitHub Actions notification email
+    else:
         print("No optimal 2-day weather windows found in the current 7-day forecast.")
+        sys.exit(0)
 
 if __name__ == "__main__":
     check_forecast_windows()
