@@ -1,0 +1,24 @@
+name: Daily Alaska Weather Tracker
+
+on:
+  schedule:
+    # Runs daily at 14:00 UTC (7:00 AM PDT / 6:00 AM AKDT)
+    - cron: '0 14 * * *'
+  # Allows you to manually trigger the script anytime with a button click
+  workflow_dispatch:
+
+jobs:
+  check-weather:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Weather Tracker
+        run: python tracker.py
