@@ -20,10 +20,11 @@ MAX_CLOUD_COVER = 60  # Percentage
 MAX_POP = 20          # Probability of Precipitation (%)
 
 def fetch_weather(lat, lon):
+    # Added forecast_days=8 to request a full 7+ day outlook from Open-Meteo
     url = (
         f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
         "&hourly=temperature_2m,precipitation_probability,cloud_cover,weather_code"
-        "&timezone=America%2FAnchorage"
+        "&forecast_days=8&timezone=America%2FAnchorage"
     )
     req = urllib.request.Request(url, headers={'User-Agent': 'AlaskaMilkRunTracker/1.0'})
     with urllib.request.urlopen(req) as response:
@@ -58,14 +59,14 @@ def evaluate_time_window(data, target_date, start_hour, end_hour):
     return is_good, summary
 
 def check_forecast_windows():
-    print("Fetching Alaska weather forecasts...\n")
+    print("Fetching 7-day Alaska weather forecasts...\n")
     weather_cache = {code: fetch_weather(loc["lat"], loc["lon"]) for code, loc in LOCATIONS.items()}
     
     today = datetime.now().date()
     good_windows_found = False
 
-    # Check consecutive 2-day windows over the next 5 days
-    for day_offset in range(1, 6):
+    # Check consecutive 2-day windows over the next 7 days (day_offset 1 through 6)
+    for day_offset in range(1, 7):
         day1 = today + timedelta(days=day_offset)
         day2 = day1 + timedelta(days=1)
 
